@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:project1/cart_detail.dart';
 import 'package:project1/dimension.dart';
 import 'package:project1/product_detail.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   const CustomBottomNavigationBar({Key? key}) : super(key: key);
@@ -186,17 +188,23 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
               SizedBox(
                 height: Dimensions.height10,
               ),
-              Container(
-                height: Dimensions.height300,
-                child: PageView.builder(
-                  itemCount: 4,
-                  controller: pageCntroller,
-                  padEnds: false,
-                  itemBuilder: (context, index) {
-                    return buildPageItem(context,index,imagePath: imgeList[index],productName: productList[index],productPrice: productPrice[index]);
-                  },
-                ),
-              ),
+              FutureBuilder<List<dynamic>>(builder: (context, snapshot) {
+                if(snapshot != null && snapshot.hasData){
+                  return Container(
+                    height: Dimensions.height300,
+                    child: PageView.builder(
+                      itemCount: snapshot.data!.length,
+                      controller: pageCntroller,
+                      padEnds: false,
+                      itemBuilder: (context, index) {
+                        return buildPageItem(context,index,imagePath: snapshot.data![index]['productImage'],productName: snapshot.data![index]['productName'],productPrice: snapshot.data![index]['productPrice'],id: snapshot.data![index]['id'],);
+                      },
+                    ),
+                  );
+                } else{
+                  return Center(child: CircularProgressIndicator());
+                }
+              },future: callProductApi(),),
               SizedBox(
                 height: Dimensions.height20,
               ),
@@ -224,6 +232,11 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
       ),
     );
   }
+  Future<List<dynamic>> callProductApi() async {
+    http.Response response = await http.get(Uri.parse('https://630da107109c16b9abe9b070.mockapi.io/data/products'));
+    List<dynamic> resList = jsonDecode(response.body.toString());
+    return resList;
+  }
 }
 
 Widget buttonStyle({required String name}) {
@@ -236,12 +249,12 @@ Widget buttonStyle({required String name}) {
   );
 }
 
-Widget buildPageItem(BuildContext context,int index,{required imagePath,required productName,required productPrice}) {
+Widget buildPageItem(BuildContext context,int index,{required imagePath,required productName,required productPrice,required id}) {
 
   return InkWell(
     onTap: () {
       Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-        return ProductDetail(imagePath: imagePath,productName: productName,);
+        return ProductDetail(imagePath: imagePath,productName: productName,id: id,productPrice: productPrice,);
       },));
     },
     child: Stack(
@@ -257,8 +270,12 @@ Widget buildPageItem(BuildContext context,int index,{required imagePath,required
           margin: EdgeInsets.only(right: Dimensions.width15),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(Dimensions.radius20),
-            child: Image.asset(
-              'assets/images/$imagePath',
+            // child: Image.asset(
+            //   'assets/images/$imagePath',
+            //   fit: BoxFit.cover,
+            // ),
+            child: Image.network(
+              '${imagePath}',
               fit: BoxFit.cover,
             ),
           ),
@@ -295,7 +312,7 @@ Widget CustomArtists({required artistImage,required artistName}) {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Container(
-        padding: EdgeInsets.only(right: Dimensions.width50),
+        padding: EdgeInsets.only(right: Dimensions.height40),
         child: CircleAvatar(
             radius: Dimensions.radius20,
             backgroundImage:
